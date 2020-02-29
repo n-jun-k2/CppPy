@@ -13,4 +13,7 @@
       <Filter>Scripts</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CppPy.h" />
+  </ItemGroup>
 </Project>

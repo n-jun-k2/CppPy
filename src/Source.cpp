@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 
+
+#include "../CppPy.h"
+
 #pragma warning(disable : 4996)
 #include <cstdlib>
 
@@ -131,7 +134,7 @@ int main()
 				Py_DECREF(args);
 				Py_DECREF(value);
 				Py_XDECREF(objReturn);
-
+				
 			}
 
 			//5. クラスの取得・メソッドの実行
@@ -168,6 +171,11 @@ int main()
 
 				Py_DECREF(type);
 				Py_DECREF(instance);
+			}
+
+			{
+				auto temp = CppPy::System::GetBuildInfo();
+				std::cout << temp << std::endl;
 			}
 
 		}
