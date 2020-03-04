@@ -7,9 +7,13 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <memory>
 
 
 namespace CppPy {
+
+	/* C Python API のオブジェクトポインター */
+	using pyPtr = std::shared_ptr<PyObject>;
 
 	/*　コードジェネレーター用	*/
 	template <class t, class... Args>
@@ -59,6 +63,9 @@ namespace CppPy {
 	namespace __tuple__ {
 		struct tuple;
 	}using tuple = __tuple__::tuple;
+	namespace __iterator__{
+		struct iterator;
+	}using iterator = __iterator__::iterator;
 	namespace __list__ {
 		struct list;
 	}using list = __list__::list;
@@ -160,8 +167,8 @@ namespace CppPy {
 		struct object {
 			PyObject* _ptr;
 
-			virtual ~object() { Py_DECREF(_ptr); }
-			object(PyObject* o) : _ptr(o) {Py_INCREF(_ptr);}
+			virtual ~object() {	Py_XDECREF(_ptr);}
+			object(PyObject* o) : _ptr(o) {}
 			object(const double& value) { _ptr = PyFloat_FromDouble(value); };
 			object(const long& value) { _ptr = PyLong_FromLong(value); };
 			object(const long long& value) { _ptr = PyLong_FromLongLong(value); }
@@ -184,7 +191,7 @@ namespace CppPy {
 				return PyByteArray_Check(o._ptr) == 0;
 			}
 			static bool isString(const object& o) {
-				return PyUnicode_Check(o._ptr) == 0;//Unicode文字列型かUnicode文字列型のサブタイプの場合 真
+				return std::strcmp(o._ptr->ob_type->tp_name,"str") == 0;
 			}
 			static bool isBuffer(const object& o) {
 				return std::strcmp( o._ptr->ob_type->tp_name,"buffer") == 0;
@@ -222,7 +229,26 @@ namespace CppPy {
 		};
 	}
 	
+	namespace __iterator__{
+		struct iterator : public object {
+			PyObject* item;
+			iterator():object(nullptr),item(nullptr){}
+			iterator(PyObject* obj) : object(PyObject_GetIter(obj)),item(nullptr){}
+			const object& operator*(){
+				return object{ item };
+			}
+			iterator& operator++() {
+				item = PyIter_Next(_ptr);
+				return *this;
+			}
+			bool operator!=(const iterator& v){
+				return item == v.item;
+			}
+		};
+	}
+
 	namespace __list__ {
+
 		struct list : public  object {
 			list(PyObject* o) : object(o) {}
 			list(const size_t len) : object(PyList_New(len)) {	}
@@ -245,7 +271,18 @@ namespace CppPy {
 				PyList_Reverse(_ptr);
 				return *this;
 			}
-			const object& operator[](uint32_t index) { return object{ PyList_GetItem(_ptr,index) }; }
+			const object& operator[](uint32_t index) { 
+				return object{ PyList_GetItem(_ptr,index) };
+			}
+
+			iterator begin() {
+				return iterator(_ptr);
+			}
+
+			iterator end(){
+				return iterator();
+			}
+			
 		};
 	}
 	

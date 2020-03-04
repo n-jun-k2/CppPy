@@ -5,6 +5,7 @@
 #include <filesystem>
 #pragma warning(disable : 4996)
 #include <cstdlib>
+#include <vector>
 
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -141,11 +142,6 @@ namespace CppPyMethodTest
 			const auto isPreInit = CppPy::System::IsInitlized();
 			Assert::IsFalse(isPreInit);
 		}
-		TEST_METHOD(Initlized) {
-			Initlized();
-			Assert::IsTrue(CppPy::System::IsInitlized());
-			finalize();
-		}
 	};
 
 
@@ -204,25 +200,31 @@ namespace CppPyMethodTest
 
 		TEST_METHOD(objectDir) {
 			initilize();
-			const std::vector<std::string> sysTemplateDir{
-				"__breakpointhook__",	"__displayhook__",	"__doc__","__excepthook__",	"__interactivehook__",	"__loader__","__name__",
-				"__package__","__spec__","__stderr__",	"__stdin__",	"__stdout__","_base_executable",	"_clear_type_cache",	"_current_frames",
-				"_debugmallocstats",	"_enablelegacywindowsfsencoding",	"_framework",	"_getframe","_git","_home","_xoptions",	"api_version",
-				"argv",	"base_exec_prefix",	"base_prefix",	"breakpointhook","builtin_module_names","byteorder","call_tracing",	"callstats",	"copyright",
-				"displayhook",	"dllhandle", 	"dont_write_bytecode","exc_info",	"excepthook",	"exec_prefix",	"executable",	"exit",	"flags",
-				"float_info", "float_repr_style", "get_asyncgen_hooks", "get_coroutine_origin_tracking_depth", "get_coroutine_wrapper",
-				"getallocatedblocks", "getcheckinterval", "getdefaultencoding", "getfilesystemencodeerrors", "getfilesystemencoding",
-				"getprofile", "getrecursionlimit", "getrefcount", "getsizeof", "getswitchinterval", "gettrace", "getwindowsversion",
-				"hash_info", "hexversion", "implementation", "int_info", "intern", "is_finalizing", "last_traceback", "last_type", "last_value",
-				"maxsize", "maxunicode", "meta_path", "modules", "path", "path_hooks", "path_importer_cache", "platform", "prefix", "ps1",
-				"ps2", "set_asyncgen_hooks", "set_coroutine_origin_tracking_depth", "set_coroutine_wrapper", "setcheckinterval", "setprofile",
-				"setrecursionlimit", "setswitchinterval", "settrace", "stderr", "stdin", "stdout", "thread_info", "version", "version_info", "warnoptions", "winver" };
+			{
+				CppPy::object sys = CppPy::object::import("sys");
+				CppPy::list sysDir = sys.dir().getInstance();
 
-			CppPy::object sys = CppPy::object::import("sys");
-			const auto sysDir = sys.dir().getInstance();
+				Assert::IsTrue(CppPy::object::isList(sysDir));
 
-			Assert::IsTrue(CppPy::object::isList(sysDir));
+				{
+					int pyIterCount = 0;
+					int cppIterCount = 0;
 
+					PyObject* item;
+					PyObject* begin = PyObject_GetIter(sysDir._ptr);
+
+					while ((item = PyIter_Next(begin))) {
+						++pyIterCount;
+						Py_DecRef(item);
+					}
+
+					for (auto it : sysDir) {
+						++cppIterCount;
+					}
+
+					Assert::AreEqual(pyIterCount,cppIterCount);
+				}
+			}
 			finalize();
 		}
 	};
